@@ -694,8 +694,8 @@ func postProfile(c echo.Context) error {
 }
 
 type Icon struct {
-	name string
-	data []byte
+	name string `db:name`
+	data []byte `db:data`
 }
 
 func iconInitialize() {
