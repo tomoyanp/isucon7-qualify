@@ -208,6 +208,7 @@ func getInitialize(c echo.Context) error {
 	db.MustExec("DELETE FROM channel WHERE id > 10")
 	db.MustExec("DELETE FROM message WHERE id > 10000")
 	db.MustExec("DELETE FROM haveread")
+	iconInitialize()
 	return c.String(204, "")
 }
 
@@ -690,6 +691,24 @@ func postProfile(c echo.Context) error {
 	}
 
 	return c.Redirect(http.StatusSeeOther, "/")
+}
+
+type Icon struct {
+	name string
+	data []byte
+}
+
+func iconInitialize() {
+	query := "SELECT name, data FROM image"
+	icon := []Icon{}
+	db.Select(&icon, query)
+	iconDir := "/home/isucon/isubata/webapp/public"
+
+	for _, row := range icon {
+		imgFile, _ := os.Create(fmt.Sprintf(`%v/%v`, iconDir, row.name))
+		imgFile.Write(([]byte)(row.data))
+		imgFile.Close()
+	}
 }
 
 // TODO nginxに移す
