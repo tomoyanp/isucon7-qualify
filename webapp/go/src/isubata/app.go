@@ -673,7 +673,8 @@ func postProfile(c echo.Context) error {
 			return err
 		}
 
-		imgFile, err := os.Create(fmt.Sprintf(`/tmp/%v`, avatarName))
+		iconDir := "/home/isucon/isubata/webapp/public"
+		imgFile, err := os.Create(fmt.Sprintf(`%v/%v`, iconDir, avatarName))
 		if err != nil {
 			return err
 		}
