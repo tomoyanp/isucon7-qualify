@@ -409,6 +409,7 @@ func getMessage(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
+// TODO キャッシュできるならする
 func queryChannels() ([]int64, error) {
 	res := []int64{}
 	err := db.Select(&res, "SELECT id FROM channel")
@@ -451,6 +452,7 @@ func fetchUnread(c echo.Context) error {
 
 	resp := []map[string]interface{}{}
 
+	// TODO 繰り返し
 	for _, chID := range channels {
 		lastID, err := queryHaveRead(userID, chID)
 		if err != nil {
@@ -670,6 +672,13 @@ func postProfile(c echo.Context) error {
 		if err != nil {
 			return err
 		}
+
+		imgFile, err := os.Create(fmt.Sprintf(`/tmp/%v`, avatarName))
+		if err != nil {
+			return err
+		}
+		defer imgFile.Close()
+		imgFile.Write(([]byte)(avatarData))
 	}
 
 	if name := c.FormValue("display_name"); name != "" {
@@ -682,6 +691,7 @@ func postProfile(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, "/")
 }
 
+// TODO nginxに移す
 func getIcon(c echo.Context) error {
 	var name string
 	var data []byte
