@@ -674,7 +674,7 @@ func postProfile(c echo.Context) error {
 			return err
 		}
 
-		iconDir := "/home/isucon/isubata/webapp/public"
+	        iconDir := "/home/isucon/isubata/webapp/public/icons"
 		imgFile, err := os.Create(fmt.Sprintf(`%v/%v`, iconDir, avatarName))
 		if err != nil {
 			return err
@@ -694,21 +694,27 @@ func postProfile(c echo.Context) error {
 }
 
 type Icon struct {
-	name string `db:name`
-	data []byte `db:data`
+	Name string `db:"name"`
+	Data []byte `db:"data"`
 }
 
 func iconInitialize() {
-	query := "SELECT name, data FROM image"
-	icon := []Icon{}
-	db.Select(&icon, query)
-	iconDir := "/home/isucon/isubata/webapp/public"
-
-	for _, row := range icon {
-		imgFile, _ := os.Create(fmt.Sprintf(`%v/%v`, iconDir, row.name))
-		imgFile.Write(([]byte)(row.data))
-		imgFile.Close()
-	}
+        limit := 100
+        offset := 0
+        for offset < 1100 {
+	    query := fmt.Sprintf("SELECT name, data FROM image limit %v offset %v", limit, offset)
+            offset += limit
+	    icon := []Icon{}
+	    db.Select(&icon, query)
+	    iconDir := "/home/isucon/isubata/webapp/public/icons"
+	    for _, row := range icon {
+                    func () {
+	    	        imgFile, _ := os.Create(fmt.Sprintf(`%v/%v`, iconDir, row.Name))
+	    	        imgFile.Write(([]byte)(row.Data))
+	    	        defer imgFile.Close()
+                    }()
+	    }
+        }
 }
 
 // TODO nginxに移す
