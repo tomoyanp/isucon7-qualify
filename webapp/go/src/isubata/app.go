@@ -649,6 +649,8 @@ func postAddChannel(c echo.Context) error {
 		fmt.Sprintf("/channel/%v", lastID))
 }
 
+var profileIndex = 0
+
 func postProfile(c echo.Context) error {
 	self, err := ensureLogin(c)
 	if self == nil {
@@ -686,7 +688,9 @@ func postProfile(c echo.Context) error {
 			return ErrBadReqeust
 		}
 
-		avatarName = fmt.Sprintf("%x%s", sha1.Sum(avatarData), ext)
+		// avatarName = fmt.Sprintf("%x%s", sha1.Sum(avatarData), ext)
+		profileIndex += 1
+		avatarName = fmt.Sprintf("%v-%v", profileIndex, fh.Filename)
 	}
 
 	if avatarName != "" && len(avatarData) > 0 {
