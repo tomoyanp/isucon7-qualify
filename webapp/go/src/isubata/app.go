@@ -47,22 +47,10 @@ func init() {
 	crand.Read(seedBuf)
 	rand.Seed(int64(binary.LittleEndian.Uint64(seedBuf)))
 
-	db_host := os.Getenv("ISUBATA_DB_HOST")
-	if db_host == "" {
-		db_host = "127.0.0.1"
-	}
-	db_port := os.Getenv("ISUBATA_DB_PORT")
-	if db_port == "" {
-		db_port = "3306"
-	}
-	db_user := os.Getenv("ISUBATA_DB_USER")
-	if db_user == "" {
-		db_user = "root"
-	}
-	db_password := os.Getenv("ISUBATA_DB_PASSWORD")
-	if db_password != "" {
-		db_password = ":" + db_password
-	}
+	db_host := "172.31.18.80"
+	db_port := "3306"
+	db_user := "isucon"
+	db_password := ":isucon"
 
 	dsn := fmt.Sprintf("%s%s@tcp(%s:%s)/isubata?parseTime=true&loc=Local&charset=utf8mb4",
 		db_user, db_password, db_host, db_port)
@@ -674,7 +662,7 @@ func postProfile(c echo.Context) error {
 			return err
 		}
 
-	        iconDir := "/home/isucon/isubata/webapp/public/icons"
+		iconDir := "/home/isucon/isubata/webapp/public/icons"
 		imgFile, err := os.Create(fmt.Sprintf(`%v/%v`, iconDir, avatarName))
 		if err != nil {
 			return err
@@ -699,22 +687,22 @@ type Icon struct {
 }
 
 func iconInitialize() {
-        limit := 100
-        offset := 0
-        for offset < 1100 {
-	    query := fmt.Sprintf("SELECT name, data FROM image limit %v offset %v", limit, offset)
-            offset += limit
-	    icon := []Icon{}
-	    db.Select(&icon, query)
-	    iconDir := "/home/isucon/isubata/webapp/public/icons"
-	    for _, row := range icon {
-                    func () {
-	    	        imgFile, _ := os.Create(fmt.Sprintf(`%v/%v`, iconDir, row.Name))
-	    	        imgFile.Write(([]byte)(row.Data))
-	    	        defer imgFile.Close()
-                    }()
-	    }
-        }
+	limit := 100
+	offset := 0
+	for offset < 1100 {
+		query := fmt.Sprintf("SELECT name, data FROM image limit %v offset %v", limit, offset)
+		offset += limit
+		icon := []Icon{}
+		db.Select(&icon, query)
+		iconDir := "/home/isucon/isubata/webapp/public/icons"
+		for _, row := range icon {
+			func() {
+				imgFile, _ := os.Create(fmt.Sprintf(`%v/%v`, iconDir, row.Name))
+				imgFile.Write(([]byte)(row.Data))
+				defer imgFile.Close()
+			}()
+		}
+	}
 }
 
 // TODO nginxに移す
@@ -729,7 +717,7 @@ func iconInitialize() {
 // 	if err != nil {
 // 		return err
 // 	}
-// 
+//
 // 	mime := ""
 // 	switch true {
 // 	case strings.HasSuffix(name, ".jpg"), strings.HasSuffix(name, ".jpeg"):
