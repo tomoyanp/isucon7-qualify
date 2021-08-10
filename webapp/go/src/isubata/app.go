@@ -432,40 +432,72 @@ func fetchUnread(c echo.Context) error {
 		return c.NoContent(http.StatusForbidden)
 	}
 
-	time.Sleep(time.Second)
+	// time.Sleep(time.Second)
 
-	channels, err := queryChannels()
-	if err != nil {
-		return err
+	// channels, err := queryChannels()
+	// if err != nil {
+	// 	return err
+	// }
+	type HaveRead struct {
+		UserID    int64     `db:"user_id"`
+		ChannelID int64     `db:"channel_id"`
+		MessageID int64     `db:"message_id"`
+		UpdatedAt time.Time `db:"updated_at"`
+		CreatedAt time.Time `db:"created_at"`
 	}
+	havereads := []HaveRead{}
+	query := "SELECT user_id, channel_id, message_id, updated_at, created_at FROM haveread INNER JOIN channel ON haveread.channel_id = channel.id WHERE haveread.user_id = ?"
+
+	db.Select(&havereads, query, userID)
 
 	resp := []map[string]interface{}{}
 
-	// TODO 繰り返し
-	for _, chID := range channels {
-		lastID, err := queryHaveRead(userID, chID)
-		if err != nil {
-			return err
-		}
-
+	for _, haveread := range havereads {
 		var cnt int64
-		if lastID > 0 {
+		var err error
+		if haveread.MessageID > 0 {
 			err = db.Get(&cnt,
 				"SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id",
-				chID, lastID)
+				haveread.ChannelID, haveread.MessageID)
 		} else {
 			err = db.Get(&cnt,
 				"SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?",
-				chID)
+				haveread.ChannelID)
 		}
 		if err != nil {
 			return err
 		}
 		r := map[string]interface{}{
-			"channel_id": chID,
+			"channel_id": haveread.ChannelID,
 			"unread":     cnt}
 		resp = append(resp, r)
 	}
+
+	// TODO 繰り返し
+	// for _, chID := range channels {
+	// 	lastID, err := queryHaveRead(userID, chID)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	var cnt int64
+	// 	if lastID > 0 {
+	// 		err = db.Get(&cnt,
+	// 			"SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id",
+	// 			chID, lastID)
+	// 	} else {
+	// 		err = db.Get(&cnt,
+	// 			"SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?",
+	// 			chID)
+	// 	}
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	r := map[string]interface{}{
+	// 		"channel_id": chID,
+	// 		"unread":     cnt}
+	// 	resp = append(resp, r)
+	// }
 
 	return c.JSON(http.StatusOK, resp)
 }
