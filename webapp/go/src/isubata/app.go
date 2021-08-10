@@ -23,6 +23,7 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/middleware"
+	"github.com/labstack/gommon/log"
 )
 
 const (
@@ -447,8 +448,13 @@ func fetchUnread(c echo.Context) error {
 	}
 	havereads := []HaveRead{}
 	query := "SELECT user_id, channel_id, message_id, updated_at, created_at FROM haveread INNER JOIN channel ON haveread.channel_id = channel.id WHERE haveread.user_id = ?"
+	// query := "SELECT user_id, channel_id, message_id, haveread.updated_at as updated_at, haveread.created_at as created_at FROM haveread INNER JOIN channel ON haveread.channel_id = channel.id WHERE haveread.user_id = ?"
 
-	db.Select(&havereads, query, userID)
+	err := db.Select(&havereads, query, userID)
+
+	if err != nil {
+		c.Echo.Logger.Errorf("fetch error ocurd %v", err)
+	}
 
 	resp := []map[string]interface{}{}
 
@@ -778,6 +784,10 @@ func tRange(a, b int64) []int64 {
 
 func main() {
 	e := echo.New()
+	e.Debug = true
+	e.Logger.SetLevel(log.DEBUG)
+	e.Use(middleware.Logger())
+
 	funcs := template.FuncMap{
 		"add":    tAdd,
 		"xrange": tRange,
