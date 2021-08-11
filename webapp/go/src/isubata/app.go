@@ -67,7 +67,7 @@ func init() {
 		time.Sleep(time.Second * 3)
 	}
 
-	db.SetMaxOpenConns(20)
+	db.SetMaxOpenConns(50)
 	db.SetConnMaxLifetime(5 * time.Minute)
 	log.Printf("Succeeded to connect db.")
 }
@@ -197,7 +197,7 @@ func getInitialize(c echo.Context) error {
 	db.MustExec("DELETE FROM channel WHERE id > 10")
 	db.MustExec("DELETE FROM message WHERE id > 10000")
 	db.MustExec("DELETE FROM haveread")
-	// iconInitialize()
+	iconInitialize()
 	return c.String(204, "")
 }
 
@@ -689,8 +689,9 @@ func postProfile(c echo.Context) error {
 		}
 
 		// avatarName = fmt.Sprintf("%x%s", sha1.Sum(avatarData), ext)
-		profileIndex += 1
-		avatarName = fmt.Sprintf("%v-%v", profileIndex, fh.Filename)
+		// profileIndex += 1
+		// avatarName = fmt.Sprintf("%v-%v", profileIndex, fh.Filename)
+		avatarName = fh.Filename
 	}
 
 	if avatarName != "" && len(avatarData) > 0 {
