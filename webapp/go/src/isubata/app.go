@@ -398,7 +398,8 @@ func getMessage(c echo.Context) error {
 	response := make([]map[string]interface{}, 0)
 	for i := len(messageUsers) - 1; i >= 0; i-- {
 		mU := messageUsers[i]
-		u := User{ID: mU.UID, Salt: mU.USalt, Password: mU.UPassword, DisplayName: mU.UDisplayName, AvatarIcon: mU.UAvatarIcon, CreatedAt: mU.UCreatedAt}
+		// u := User{ID: mU.UID, Salt: mU.USalt, Password: mU.UPassword, DisplayName: mU.UDisplayName, AvatarIcon: mU.UAvatarIcon, CreatedAt: mU.UCreatedAt}
+		u := User{Name: mU.UName, DisplayName: mU.UDisplayName, AvatarIcon: mU.UAvatarIcon}
 		r := make(map[string]interface{})
 		r["id"] = mU.MId
 		r["user"] = u
@@ -610,7 +611,8 @@ func getHistory(c echo.Context) error {
 	response := make([]map[string]interface{}, 0)
 	for i := len(messageUsers) - 1; i >= 0; i-- {
 		mU := messageUsers[i]
-		u := User{ID: mU.UID, Salt: mU.USalt, Password: mU.UPassword, DisplayName: mU.UDisplayName, AvatarIcon: mU.UAvatarIcon, CreatedAt: mU.UCreatedAt}
+		// u := User{ID: mU.UID, Salt: mU.USalt, Password: mU.UPassword, DisplayName: mU.UDisplayName, AvatarIcon: mU.UAvatarIcon, CreatedAt: mU.UCreatedAt}
+		u := User{Name: mU.UName, DisplayName: mU.UDisplayName, AvatarIcon: mU.UAvatarIcon}
 		r := make(map[string]interface{})
 		r["id"] = mU.MId
 		r["user"] = u
