@@ -340,6 +340,20 @@ func postMessage(c echo.Context) error {
 	return c.NoContent(204)
 }
 
+type MessageUser struct {
+	MId          int64     `db:"mId"`
+	MContent     string    `db:"mContent"`
+	MCreatedAt   time.Time `db:"mCreatedAt"`
+	UID          int64     `json:"-" db:"uId"`
+	UName        string    `json:"name" db:"uName"`
+	USalt        string    `json:"-" db:"uSalt"`
+	UPassword    string    `json:"-" db:"uPassword"`
+	UDisplayName string    `json:"display_name" db:"uDisplayName"`
+	UAvatarIcon  string    `json:"avatar_icon" db:"uAvatarIcon"`
+	UCreatedAt   time.Time `json:"-" db:"uCreatedAt"`
+}
+
+// TODO 直す
 func jsonifyMessage(m Message) (map[string]interface{}, error) {
 	u := User{}
 	err := db.Get(&u, "SELECT name, display_name, avatar_icon FROM user WHERE id = ?",
@@ -371,26 +385,48 @@ func getMessage(c echo.Context) error {
 		return err
 	}
 
-	messages, err := queryMessages(chanID, lastID)
-	if err != nil {
-		return err
+	query := "SELECT message.id as mId, message.created_at as mCreatedAt, message.content as mContent, user.id as uId, user.name as uName, user.salt as uSalt, user.password as uPassword, user.display_name as uDisplayName, user.avatar_icon as uAvatarIcon, user.created_at as uCreatedAt FROM message LEFT JOIN user ON message.user_id = user.id WHERE message.id > ? AND message.channel_id = ? ORDER BY message.id DESC LIMIT 100"
+
+	messageUsers := []MessageUser{}
+	selectErr := db.Select(&messageUsers, query, lastID, chanID)
+
+	if selectErr != nil {
+		log.Printf("getMessages Select Error ===> %v", selectErr)
+		return selectErr
 	}
 
 	response := make([]map[string]interface{}, 0)
-	for i := len(messages) - 1; i >= 0; i-- {
-		m := messages[i]
-		r, err := jsonifyMessage(m)
-		if err != nil {
-			return err
-		}
+	for i := len(messageUsers) - 1; i >= 0; i-- {
+		mU := messageUsers[i]
+		u := User{ID: mU.UID, Salt: mU.USalt, Password: mU.UPassword, DisplayName: mU.UDisplayName, AvatarIcon: mU.UAvatarIcon, CreatedAt: mU.UCreatedAt}
+		r := make(map[string]interface{})
+		r["id"] = mU.MId
+		r["user"] = u
+		r["date"] = mU.MCreatedAt.Format("2006/01/02 15:04:05")
+		r["content"] = mU.MContent
 		response = append(response, r)
 	}
 
-	if len(messages) > 0 {
+	// messages, err := queryMessages(chanID, lastID)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// response := make([]map[string]interface{}, 0)
+	// for i := len(messages) - 1; i >= 0; i-- {
+	// 	m := messages[i]
+	// 	r, err := jsonifyMessage(m)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	response = append(response, r)
+	// }
+
+	if len(messageUsers) > 0 {
 		_, err := db.Exec("INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at)"+
 			" VALUES (?, ?, ?, NOW(), NOW())"+
 			" ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()",
-			userID, chanID, messages[0].ID, messages[0].ID)
+			userID, chanID, messageUsers[0].MId, messageUsers[0].MId)
 		if err != nil {
 			return err
 		}
@@ -406,26 +442,26 @@ func queryChannels() ([]int64, error) {
 	return res, err
 }
 
-func queryHaveRead(userID, chID int64) (int64, error) {
-	type HaveRead struct {
-		UserID    int64     `db:"user_id"`
-		ChannelID int64     `db:"channel_id"`
-		MessageID int64     `db:"message_id"`
-		UpdatedAt time.Time `db:"updated_at"`
-		CreatedAt time.Time `db:"created_at"`
-	}
-	h := HaveRead{}
-
-	err := db.Get(&h, "SELECT * FROM haveread WHERE user_id = ? AND channel_id = ?",
-		userID, chID)
-
-	if err == sql.ErrNoRows {
-		return 0, nil
-	} else if err != nil {
-		return 0, err
-	}
-	return h.MessageID, nil
-}
+// func queryHaveRead(userID, chID int64) (int64, error) {
+// 	type HaveRead struct {
+// 		UserID    int64     `db:"user_id"`
+// 		ChannelID int64     `db:"channel_id"`
+// 		MessageID int64     `db:"message_id"`
+// 		UpdatedAt time.Time `db:"updated_at"`
+// 		CreatedAt time.Time `db:"created_at"`
+// 	}
+// 	h := HaveRead{}
+//
+// 	err := db.Get(&h, "SELECT * FROM haveread WHERE user_id = ? AND channel_id = ?",
+// 		userID, chID)
+//
+// 	if err == sql.ErrNoRows {
+// 		return 0, nil
+// 	} else if err != nil {
+// 		return 0, err
+// 	}
+// 	return h.MessageID, nil
+// }
 
 func fetchUnread(c echo.Context) error {
 	userID := sessUserID(c)
@@ -543,21 +579,44 @@ func getHistory(c echo.Context) error {
 		return ErrBadReqeust
 	}
 
-	messages := []Message{}
-	err = db.Select(&messages,
-		"SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
-		chID, N, (page-1)*N)
-	if err != nil {
-		return err
+	// messages := []Message{}
+	// err = db.Select(&messages,
+	// 	"SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
+	// 	chID, N, (page-1)*N)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// mjson := make([]map[string]interface{}, 0)
+	// for i := len(messages) - 1; i >= 0; i-- {
+	// 	// TODO ここも同じ
+	// 	r, err := jsonifyMessage(messages[i])
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	mjson = append(mjson, r)
+	// }
+
+	query := "SELECT message.id as mId, message.created_at as mCreatedAt, message.content as mContent, user.id as uId, user.name as uName, user.salt as uSalt, user.password as uPassword, user.display_name as uDisplayName, user.avatar_icon as uAvatarIcon, user.created_at as uCreatedAt FROM message LEFT JOIN user ON message.user_id = user.id  WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?"
+
+	messageUsers := []MessageUser{}
+	selectErr := db.Select(&messageUsers, query, chID, N, (page-1)*N)
+
+	if selectErr != nil {
+		log.Printf("getHistory Select Error ===> %v", selectErr)
+		return selectErr
 	}
 
-	mjson := make([]map[string]interface{}, 0)
-	for i := len(messages) - 1; i >= 0; i-- {
-		r, err := jsonifyMessage(messages[i])
-		if err != nil {
-			return err
-		}
-		mjson = append(mjson, r)
+	response := make([]map[string]interface{}, 0)
+	for i := len(messageUsers) - 1; i >= 0; i-- {
+		mU := messageUsers[i]
+		u := User{ID: mU.UID, Salt: mU.USalt, Password: mU.UPassword, DisplayName: mU.UDisplayName, AvatarIcon: mU.UAvatarIcon, CreatedAt: mU.UCreatedAt}
+		r := make(map[string]interface{})
+		r["id"] = mU.MId
+		r["user"] = u
+		r["date"] = mU.MCreatedAt.Format("2006/01/02 15:04:05")
+		r["content"] = mU.MContent
+		response = append(response, r)
 	}
 
 	channels := []ChannelInfo{}
@@ -569,7 +628,7 @@ func getHistory(c echo.Context) error {
 	return c.Render(http.StatusOK, "history", map[string]interface{}{
 		"ChannelID": chID,
 		"Channels":  channels,
-		"Messages":  mjson,
+		"Messages":  response,
 		"MaxPage":   maxPage,
 		"Page":      page,
 		"User":      user,
@@ -693,16 +752,13 @@ func postProfile(c echo.Context) error {
 		avatarName = fmt.Sprintf("%v-%v", profileIndex, fh.Filename)
 	}
 
-	if avatarName != "" && len(avatarData) > 0 {
-		// _, err := db.Exec("INSERT INTO image (name, data) VALUES (?, ?)", avatarName, avatarData)
-		// if err != nil {
-		// 	return err
-		// }
-		_, err = db.Exec("UPDATE user SET avatar_icon = ? WHERE id = ?", avatarName, self.ID)
+	name := c.FormValue("display_name")
+
+	if avatarName != "" && len(avatarData) > 0 && name != "" {
+		_, err = db.Exec("UPDATE user SET avatar_icon = ?, display_name = ? WHERE id = ?", avatarName, name, self.ID)
 		if err != nil {
 			return err
 		}
-
 		iconDir := "/home/isucon/isubata/webapp/public/icons"
 		imgFile, err := os.Create(fmt.Sprintf(`%v/%v`, iconDir, avatarName))
 		if err != nil {
@@ -710,14 +766,31 @@ func postProfile(c echo.Context) error {
 		}
 		defer imgFile.Close()
 		imgFile.Write(([]byte)(avatarData))
-	}
-
-	if name := c.FormValue("display_name"); name != "" {
+	} else if avatarName != "" && len(avatarData) > 0 {
+		_, err = db.Exec("UPDATE user SET avatar_icon = ? WHERE id = ?", avatarName, self.ID)
+		if err != nil {
+			return err
+		}
+		iconDir := "/home/isucon/isubata/webapp/public/icons"
+		imgFile, err := os.Create(fmt.Sprintf(`%v/%v`, iconDir, avatarName))
+		if err != nil {
+			return err
+		}
+		defer imgFile.Close()
+		imgFile.Write(([]byte)(avatarData))
+	} else if name != "" {
 		_, err := db.Exec("UPDATE user SET display_name = ? WHERE id = ?", name, self.ID)
 		if err != nil {
 			return err
 		}
 	}
+
+	// if name := c.FormValue("display_name"); name != "" {
+	// 	_, err := db.Exec("UPDATE user SET display_name = ? WHERE id = ?", name, self.ID)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return c.Redirect(http.StatusSeeOther, "/")
 }
