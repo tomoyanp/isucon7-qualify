@@ -597,7 +597,7 @@ func getHistory(c echo.Context) error {
 	// 	mjson = append(mjson, r)
 	// }
 
-	query := "SELECT message.id as mId, message.created_at as mCreatedAt, message.content as mContent, user.id as uId, user.name as uName, user.salt as uSalt, user.password as uPassword, user.display_name as uDisplayName, user.avatar_icon as uAvatarIcon, user.created_at as uCreatedAt FROM message LEFT JOIN user ON message.user_id = user.id  WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?"
+	query := "SELECT message.id as mId, message.created_at as mCreatedAt, message.content as mContent, user.id as uId, user.name as uName, user.salt as uSalt, user.password as uPassword, user.display_name as uDisplayName, user.avatar_icon as uAvatarIcon, user.created_at as uCreatedAt FROM message LEFT JOIN user ON message.user_id = user.id  WHERE message.channel_id = ? ORDER BY message.id DESC LIMIT ? OFFSET ?"
 
 	messageUsers := []MessageUser{}
 	selectErr := db.Select(&messageUsers, query, chID, N, (page-1)*N)
